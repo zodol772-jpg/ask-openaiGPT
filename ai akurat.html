@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Foto Vision</title>
+
+<style>
+body {
+    margin: 0;
+    background: #0f0f0f;
+    color: white;
+    font-family: Poppins, sans-serif;
+}
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+}
+
+/* TOP BAR */
+.topbar {
+    background: #1a1a1a;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #222;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.left-top-items { display:flex; align-items:center; gap:15px; }
+
+.plus-btn {
+    font-size: 24px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 10px;
+    background: linear-gradient(45deg, rgb(0,102,255), rgb(150,0,255));
+    font-weight: bold;
+}
+
+/* MINI MENU */
+#miniMenu {
+    position: absolute;
+    top: 58px;
+    left: 15px;
+    background: #1f1f1f;
+    border: 1px solid #333;
+    padding: 15px;
+    border-radius: 14px;
+    display: none;
+    z-index: 50;
+}
+.mini-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    background: linear-gradient(45deg, rgb(100,150,255), rgb(190,70,255));
+    font-weight: bold;
+}
+.mini-item:hover { filter: brightness(1.2); }
+
+.online { color:#00ff9d; }
+#digitalClock { font-size:17px; font-weight:bold; }
+
+/* CHAT BOX */
+.chat-box {
+    margin-top: 20px;
+    background: #161616;
+    padding: 20px;
+    border-radius: 15px;
+    min-height: 450px;
+    border: 1px solid #333;
+}
+
+/* BUBBLES */
+.user {
+    background: #3a3a3a;
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    width: fit-content;
+    max-width: 80%;
+    margin-left: auto;
+}
+
+.bot {
+    background: #1e1e1e;
+    padding: 12px;
+    border-radius: 12px;
+    width: fit-content;
+    max-width: 80%;
+    border-left: 3px solid #9f5bff;
+    margin-bottom: 12px;
+    position: relative;
+}
+
+/* COPY BUTTON */
+.copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 9px;
+    font-size: 9px;
+    background: #2b2b2b;
+    color: #cfcfcf;
+    border: 1px solid #444;
+    padding: 4px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.copy-btn:hover {
+    background: #3a3a3a;
+    color: white;
+}
+
+/* LOADING */
+.processing {
+    background: #2a2a2a;
+    padding: 12px;
+    border-radius: 12px;
+    color: #cfcfcf;
+    font-style: italic;
+    width: fit-content;
+    max-width: 80%;
+    border-left: 3px solid #666;
+    margin-bottom: 12px;
+}
+
+.input-area {
+    display: flex;
+    margin-top: 15px;
+    gap: 10px;
+}
+
+#userInput {
+    flex: 1;
+    padding: 12px;
+    background: #1d1d1d;
+    border: 1px solid #333;
+    border-radius: 12px;
+    color: white;
+}
+
+.send-btn {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: bold;
+    background: linear-gradient(45deg, rgb(0,102,255), rgb(150,0,255));
+    color: white;
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="left-top-items">
+        <div class="plus-btn" onclick="togglePlus()">＋</div>
+    </div>
+    <div id="digitalClock">00:00:00</div>
+    <div class="online">● online</div>
+</div>
+
+<div id="miniMenu">
+    <div class="mini-item" onclick="uploadFile.click()">UPLOAD</div>
+</div>
+
+<input type="file" id="uploadFile" accept="image/*" style="display:none">
+
+<div class="container">
+    <div class="chat-box" id="chatBox"></div>
+
+    <div class="input-area">
+        <input id="userInput" placeholder="ASK OpenaiGPT">
+        <button class="send-btn" onclick="sendMsg()">Kirimkan</button>
+    </div>
+</div>
+
+<script>
+function togglePlus(){
+    miniMenu.style.display = miniMenu.style.display === "block" ? "none" : "block";
+}
+
+setInterval(()=>{
+    const n = new Date();
+    digitalClock.innerHTML =
+    `${n.getHours().toString().padStart(2,'0')}:${n.getMinutes().toString().padStart(2,'0')}:${n.getSeconds().toString().padStart(2,'0')}`;
+},1000);
+
+function copyText(btn){
+    const text = btn.parentElement.querySelector(".bot-text").innerText;
+    navigator.clipboard.writeText(text);
+    btn.innerText = "✓ Tersalin";
+    setTimeout(()=>btn.innerText="Salin",1500);
+}
+
+async function askAI(message){
+    const API_KEY = "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"; // ← GANTI MANUAL
+    const res = await fetch("https://api.openai.com/v1/chat/completions",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer "+API_KEY
+        },
+        body:JSON.stringify({
+            model:"gpt-4o-mini",
+            messages:[{role:"user",content:message}]
+        })
+    });
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.content || "AI Error";
+}
+
+async function sendMsg(){
+    const txt = userInput.value.trim();
+    if(!txt) return;
+
+    chatBox.innerHTML += `<div class="user">${txt}</div>`;
+    userInput.value="";
+
+    const load = showProcessing();
+    const reply = await askAI(txt);
+    load.remove();
+
+    chatBox.innerHTML += `
+    <div class="bot">
+        <button class="copy-btn" onclick="copyText(this)">Salin</button>
+        <div class="bot-text">${reply}</div>
+    </div>`;
+}
+
+function showProcessing(){
+    const d=document.createElement("div");
+    d.className="processing";
+    d.innerText="AI sedang memproses...";
+    chatBox.appendChild(d);
+    return d;
+}
+</script>
+
+</body>
+</html>
